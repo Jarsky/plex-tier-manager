@@ -1,0 +1,39 @@
+services:
+  backend:
+    container_name: plex-tier-manager
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    ports:
+      - "5000:5000"
+    networks:
+      - mediabox
+    volumes:
+      - ./backend/data:/app/instance
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+    restart: unless-stopped
+
+  frontend:
+    container_name: ptm-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    working_dir: /app
+    command: ["npm", "run", "dev", "--", "--host"]
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    networks:
+      - mediabox
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
+networks:
+  mediabox:
+    external: true

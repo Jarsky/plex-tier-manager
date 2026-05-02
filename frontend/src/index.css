@@ -1,0 +1,45 @@
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* Global dark theme defaults */
+:root {
+  background: #141414;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+  --page-bg: #141414;
+  --text-color: #ffffff;
+}
+
+:root[data-theme='default'] {
+  --page-bg: #141414;
+  --text-color: #ffffff;
+}
+
+:root[data-theme='plex-dark'] {
+  --page-bg: #0f1013;
+  --text-color: #f4f4f5;
+}
+
+:root[data-theme='elements'] {
+  --page-bg: #101827;
+  --text-color: #e5e7eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--page-bg);
+  color: var(--text-color);
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+

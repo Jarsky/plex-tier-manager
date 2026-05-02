@@ -1,0 +1,9 @@
+flask
+flask_sqlalchemy
+flask_login
+flask_mail
+flask_migrate
+plexapi
+stripe
+python-dotenv
+flask_wtf
