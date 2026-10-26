@@ -1,45 +1,41 @@
-/* Tailwind CSS v4 */
 @import "tailwindcss";
 
-/* Global dark theme defaults */
-:root {
-  background: #141414;
-  color: #fff;
-  font-family: 'Inter', system-ui, sans-serif;
-  --page-bg: #141414;
-  --text-color: #ffffff;
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Plex-style charcoal, darkest first */
+  --color-ink-950: #121315;
+  --color-ink-900: #18191c;
+  --color-ink-850: #1f2124;
+  --color-ink-800: #26282c;
+  --color-ink-700: #303338;
+  --color-ink-600: #3e4248;
+  --color-gold: #e5a00d;      /* Plex's own accent: buttons, success, highlights */
+  --color-plex: #f3b740;      /* lighter gold: links, focus rings */
+  --color-ember: #d9711c;     /* deep orange: gradients, secondary highlights */
 }
 
-:root[data-theme='default'] {
-  --page-bg: #141414;
-  --text-color: #ffffff;
-}
+html { color-scheme: dark; }
+body { @apply bg-ink-950 text-zinc-200 antialiased; min-height: 100dvh; }
 
-:root[data-theme='plex-dark'] {
-  --page-bg: #0f1013;
-  --text-color: #f4f4f5;
+.bg-glow {
+  background:
+    radial-gradient(60rem 30rem at 10% -10%, rgb(229 160 13 / 0.10), transparent 60%),
+    radial-gradient(50rem 30rem at 95% 0%, rgb(217 113 28 / 0.09), transparent 60%),
+    radial-gradient(40rem 25rem at 50% 110%, rgb(243 183 64 / 0.05), transparent 60%);
 }
-
-:root[data-theme='elements'] {
-  --page-bg: #101827;
-  --text-color: #e5e7eb;
+.text-gradient {
+  background: linear-gradient(90deg, var(--color-plex), var(--color-gold) 45%, var(--color-ember));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-
-* {
-  box-sizing: border-box;
+.bg-gradient-brand { background: linear-gradient(110deg, var(--color-plex), var(--color-gold) 50%, var(--color-ember)); }
+.card { @apply rounded-2xl border border-white/[0.07] bg-ink-900/80 backdrop-blur; }
+.input {
+  @apply w-full rounded-xl border border-white/10 bg-ink-850 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500
+         outline-none transition focus:border-plex/60 focus:ring-2 focus:ring-plex/20 disabled:opacity-50;
 }
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: var(--page-bg);
-  color: var(--text-color);
-}
-
-#root {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-zinc-400; }
+.eq span { animation: eq 1s ease-in-out infinite; transform-origin: bottom; }
+.eq span:nth-child(2) { animation-delay: -.3s } .eq span:nth-child(3) { animation-delay: -.6s } .eq span:nth-child(4) { animation-delay: -.15s }
+@keyframes eq { 0%,100% { transform: scaleY(.3) } 50% { transform: scaleY(1) } }

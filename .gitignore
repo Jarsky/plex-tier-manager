@@ -1,57 +1,24 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.so
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-.coverage.*
-htmlcov/
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Flask / runtime data
-instance/
-backend/instance/
-backend/data/
-*.db
-*.sqlite
-*.sqlite3
-
-# Environment and secrets
+# secrets and local data
 .env
-.env.*
-!.env.example
+*.db
+*.sqlite3
+data/
 
-# Node / frontend
-frontend/node_modules/
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# frontend
+node_modules/
 frontend/dist/
-frontend/dist-ssr/
-frontend/.vite/
-frontend/*.local
+*.tsbuildinfo
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# IDE / OS
+# editor / OS
 .vscode/
-!.vscode/extensions.json
 .idea/
-.flow/
 .DS_Store
-Thumbs.db
-
-# Build artifacts
-dist/
-build/
+docker-compose.override.yml

@@ -1,39 +1,32 @@
+# Plex Tier Manager with PostgreSQL. Copy .env.example to .env, fill it in, then:  docker compose up -d
+# Run it where it can reach Tautulli, and where Tautulli can reach it (for the webhook): e.g. next to Plex.
 services:
-  backend:
-    container_name: plex-tier-manager
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    env_file:
-      - ./.env
-    ports:
-      - "5000:5000"
-    networks:
-      - mediabox
-    volumes:
-      - ./backend/data:/app/instance
-    environment:
-      - FLASK_APP=app.py
-      - FLASK_ENV=production
+  ptm:
+    image: ptm:latest
+    build: .
+    container_name: ptm
     restart: unless-stopped
-
-  frontend:
-    container_name: ptm-frontend
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    working_dir: /app
-    command: ["npm", "run", "dev", "--", "--host"]
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-    networks:
-      - mediabox
+    env_file: .env
     environment:
-      - NODE_ENV=development
-    restart: unless-stopped
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ptm}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-ptm}
+    ports:
+      - "${PTM_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
-networks:
-  mediabox:
-    external: true
+  db:
+    image: postgres:17-alpine
+    container_name: ptm-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ptm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-ptm}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

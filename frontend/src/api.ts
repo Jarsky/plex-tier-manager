@@ -1,270 +1,107 @@
-import type { User, Subscription } from './types';
-import type { AdminUserEntry, PlexUser } from './types-admin';
+// Thin fetch wrapper: JSON in/out, cookie session, CSRF header, readable errors.
+export class ApiError extends Error {
+  constructor(message: string, public status: number) { super(message); }
+}
 
-const API_BASE = '/api';
-
-async function parseApiResponse(res: Response): Promise<any> {
-  const contentType = res.headers.get('content-type') || '';
-  const text = await res.text();
-  if (!text) {
-    throw new Error(`Empty response from ${res.url}`);
-  }
-
-  if (!contentType.includes('application/json')) {
-    if (res.redirected) {
-      throw new Error('Session expired. Please sign in again.');
-    }
-    throw new Error(`Unexpected response from ${res.url} (${res.status})`);
-  }
-
+export async function api<T = any>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
+  let res: Response;
   try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`Invalid JSON response from ${res.url}`);
+    res = await fetch(`/api${path}`, {
+      method: opts.method ?? (opts.body !== undefined ? "POST" : "GET"),
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "ptm", ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}) },
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    });
+  } catch (e) {
+    // A reverse proxy guarding /admin (e.g. Authentik forward auth) redirects expired sessions to its login page,
+    // which fetch can't follow cross-origin. Reload the page so the browser does the login.
+    if (path.startsWith("/admin")) { window.location.assign(window.location.pathname); }
+    throw new ApiError("Can't reach the server. Check your connection and try again.", 0);
   }
-}
-
-async function getCsrfToken(): Promise<string> {
-  const csrfRes = await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' });
-  if (!csrfRes.ok) {
-    throw new Error('Failed to fetch CSRF token');
+  const text = await res.text();
+  const data = text ? safeJson(text) : null;
+  if (!res.ok) {
+    const detail = data?.detail;
+    const msg = typeof detail === "string" ? detail
+      : Array.isArray(detail) ? detail.map((d: any) => d.msg).join("; ")
+      : res.status === 502 || res.status === 504 ? "The server took too long or is unavailable. Try again."
+      : `Request failed (${res.status})`;
+    throw new ApiError(msg, res.status);
   }
-  const csrfData = await parseApiResponse(csrfRes);
-  if (!csrfData.csrf_token) {
-    throw new Error('CSRF token missing from response');
-  }
-  return csrfData.csrf_token;
+  return data as T;
 }
 
-interface ApiResponse {
-  success?: boolean;
-  message?: string;
-  error?: string;
-}
+function safeJson(t: string) { try { return JSON.parse(t); } catch { return null; } }
 
-export interface ThemeOption {
-  key: string;
-  label: string;
-}
+export const plexStartUrl = (opts: { mode?: "login" | "owner"; returnTo?: string } = {}) => {
+  const q = new URLSearchParams({ mode: opts.mode ?? "login" });
+  if (opts.returnTo) q.set("return_to", opts.returnTo);
+  return `/api/auth/plex/start?${q}`;
+};
 
-export interface SiteConfig {
-  site_title: string;
-  theme: string;
-  theme_options: ThemeOption[];
-}
+// ── types ────────────────────────────────────────────────────────────────────
+export type SiteConfig = {
+  site_name: string; site_tagline: string; signup_open: boolean; plex_ready: boolean; server_name: string;
+  plex_callback_url: string; support_enabled: boolean; billing_enabled: boolean; signed_in: boolean;
+};
 
-export interface AuthStatus {
-  authenticated: boolean;
-  user?: User;
-}
+export type ServerAccess = "none" | "invited" | "shared";
+export type PlanLimits = { max_streams: number | null; max_resolution: string | null; max_resolution_label: string | null;
+  allow_downloads: boolean; all_libraries: boolean };
 
-export interface IntegrationField {
-  is_secret: boolean;
-  has_value: boolean;
-  value: string;
-}
+export type Me = {
+  id: string; display_name: string; email: string | null; avatar_url: string | null; is_admin: boolean; created_at: string;
+  plex: null | { username: string; email: string | null; thumb: string | null; server_access: ServerAccess; managed: boolean;
+    existing_friend: boolean; invited_at: string | null; shared_at: string | null; is_owner: boolean };
+  server_name: string;
+  membership: Membership;
+};
 
-export interface AdminSiteSettings extends SiteConfig {
-  integrations: Record<string, Record<string, IntegrationField>>;
-}
+export type Membership = {
+  plan: null | ({ id: string; name: string; price_cents: number; currency: string; interval: string; libraries: number } & PlanLimits);
+  status: string | null; period_end: string | null; cancel_at_period_end: boolean; source: string | null; has_billing_account: boolean;
+};
 
-export async function fetchDashboardData(): Promise<{ user: User; subscriptions: Subscription[] }> {
-  const res = await fetch(`${API_BASE}/dashboard`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to fetch dashboard data');
-  return parseApiResponse(res);
-}
+export type Plan = {
+  id: string; name: string; description: string; perks: string[]; price_cents: number; currency: string; interval: string;
+  highlight: boolean; purchasable: boolean; limits: PlanLimits; libraries: string[]; promotion: Promotion | null;
+};
 
-export async function fetchAuthStatus(): Promise<AuthStatus> {
-  const res = await fetch(`${API_BASE}/auth/status`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to fetch auth status');
-  return parseApiResponse(res);
-}
+export type Promotion = {
+  id: string; name: string; summary: string; trial_days: number | null; percent_off: number | null;
+  duration: "once" | "repeating" | "forever"; duration_months: number | null; ends_at: string | null;
+  first_subscription_only: boolean; plan_ids: string[] | null; has_code: boolean;
+};
 
-export async function fetchSiteConfig(): Promise<SiteConfig> {
-  const res = await fetch(`${API_BASE}/site-config`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to fetch site config');
-  return parseApiResponse(res);
-}
+export const money = (cents: number, currency: string) =>
+  new Intl.NumberFormat(undefined, { style: "currency", currency: currency.toUpperCase(), minimumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
 
-export async function fetchAdminUsers(): Promise<AdminUserEntry[]> {
-  const res = await fetch('/admin/api/users', { credentials: 'include' });
-  if (!res.ok) throw new Error(`Failed to fetch admin users (${res.status})`);
-  const data = await parseApiResponse(res);
-  return data.users ?? [];
-}
+export const streamsText = (n: number | null) => (n == null ? "Unlimited streams" : n === 1 ? "1 stream at a time" : `${n} streams at a time`);
+export const qualityText = (label: string | null) => (label ? `Up to ${label}` : "Any quality, up to 4K");
 
-export async function fetchPlexUsers(): Promise<PlexUser[]> {
-  const res = await fetch('/admin/api/plex_users', { credentials: 'include' });
-  const data = await parseApiResponse(res);
-  if (!res.ok || !data.success) {
-    throw new Error(data.error || 'Failed to fetch Plex users');
-  }
+// ── home page rows (from Seerr) ──────────────────────────────────────────────
+export type Title = { tmdb_id: number; type: "movie" | "tv"; title: string; poster: string | null; release_date: string | null;
+  next_air_date: string | null; status: number; requested: boolean; url: string | null; date?: string };
+export type HomeRows = { enabled: boolean; new: Title[]; upcoming: Title[]; errors: Record<string, string> };
 
-  return (data.users ?? []).map((u: any) => ({
-    name: u.name,
-    email: u.email,
-    plex_id: u.plex_id,
-    is_member: Boolean(u.is_member),
-    plex_joined_at: u.joined_at,
-  }));
-}
+// ── admin: Plex & Tautulli ───────────────────────────────────────────────────
+export type PlexMemberInfo = { plex_id: string; username: string; email: string | null; thumb: string | null; server_access: ServerAccess;
+  managed: boolean; existing_friend: boolean; allow_downloads: boolean; invited_at: string | null; shared_at: string | null;
+  removed_at: string | null; checked_at: string | null; last_error: string | null };
+export type EnforcementRow = { id: number; created_at: string; user_id: string | null; plex_username: string; rule: "streams" | "quality";
+  title: string; detail: string; action: "stopped" | "logged" | "failed" };
 
-export async function fetchAdminSiteSettings(): Promise<AdminSiteSettings> {
-  const res = await fetch('/admin/api/site_settings', { credentials: 'include' });
-  const data = await parseApiResponse(res);
-  if (!res.ok || !data.success) {
-    throw new Error(data.error || 'Failed to fetch site settings');
-  }
+// ── audit ────────────────────────────────────────────────────────────────────
+export type AuditEntry = { id: number; created_at: string; actor_id: string | null; actor_label: string; action: string;
+  target_type: string | null; target_id: string | null; target_label: string; details: Record<string, any>; ip: string };
+export type BillingEventRow = { id: string; type: string; user_id: string | null; user_label?: string; customer_id: string | null;
+  summary: string; amount_cents: number | null; currency: string | null; stripe_created_at: string | null; received_at: string };
 
-  return {
-    site_title: data.site_title,
-    theme: data.theme,
-    theme_options: data.theme_options ?? [],
-    integrations: data.integrations ?? {},
-  };
-}
-
-async function postAdminJson(url: string, payload: Record<string, unknown>): Promise<ApiResponse> {
-  const csrfToken = await getCsrfToken();
-  const res = await fetch(url, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken,
-    },
-    body: JSON.stringify(payload),
-  });
-  return parseApiResponse(res);
-}
-
-export async function saveAdminUser(userId: number, role: number, active: boolean): Promise<ApiResponse> {
-  return postAdminJson('/admin/save_user', {
-    user_id: userId,
-    role,
-    active: active ? 1 : 0,
-  });
-}
-
-export async function deleteAdminUser(userId: number): Promise<ApiResponse> {
-  return postAdminJson('/admin/delete_user', { user_id: userId });
-}
-
-export async function unlinkAdminPlex(userId: number): Promise<ApiResponse> {
-  return postAdminJson('/admin/unlink_plex', { user_id: userId });
-}
-
-export async function changeAdminPassword(userId: number, newPassword: string): Promise<ApiResponse> {
-  return postAdminJson('/admin/change_password', {
-    user_id: userId,
-    new_password: newPassword,
-  });
-}
-
-export async function assignAdminPlan(userId: number, tier: string, startDate: string, endDate?: string): Promise<ApiResponse> {
-  return postAdminJson('/admin/assign_plan', {
-    user_id: userId,
-    tier,
-    start_date: startDate,
-    end_date: endDate || null,
-  });
-}
-
-export async function fetchAdminUserSummary(userId: number): Promise<{ success: boolean; html?: string; message?: string }> {
-  const data = await postAdminJson('/admin/user_summary', { user_id: userId });
-  return {
-    success: Boolean(data.success),
-    html: (data as any).html,
-    message: data.message,
-  };
-}
-
-export async function saveIntegrationSectionSettings(values: Record<string, string>): Promise<ApiResponse> {
-  const csrfToken = await getCsrfToken();
-  const body = new URLSearchParams();
-  Object.entries(values).forEach(([key, value]) => body.append(key, value));
-
-  const res = await fetch('/admin/settings', {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': csrfToken,
-    },
-    body: body.toString(),
-  });
-  return parseApiResponse(res);
-}
-
-export async function saveSiteTitle(siteTitle: string): Promise<ApiResponse> {
-  const csrfToken = await getCsrfToken();
-  const body = new URLSearchParams({ site_title: siteTitle });
-  const res = await fetch('/admin/set_site_title', {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': csrfToken,
-    },
-    body: body.toString(),
-  });
-  return parseApiResponse(res);
-}
-
-export async function saveTheme(theme: string): Promise<ApiResponse> {
-  const csrfToken = await getCsrfToken();
-  const body = new URLSearchParams({ theme });
-  const res = await fetch('/admin/set_theme', {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': csrfToken,
-    },
-    body: body.toString(),
-  });
-  return parseApiResponse(res);
-}
-
-export async function signupUser(email: string, password?: string): Promise<ApiResponse & { generated_password?: string }> {
-  const csrfToken = await getCsrfToken();
-  const body = new URLSearchParams({ email });
-  if (password) {
-    body.set('password', password);
-  }
-
-  const res = await fetch('/signup', {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': csrfToken,
-    },
-    body: body.toString(),
-  });
-  return parseApiResponse(res);
-}
-
-export async function changeUserPassword(newPassword: string, confirmPassword: string): Promise<ApiResponse> {
-  const csrfToken = await getCsrfToken();
-  const body = new URLSearchParams({
-    new_password: newPassword,
-    confirm_password: confirmPassword,
-  });
-
-  const res = await fetch('/user/change_password', {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': csrfToken,
-    },
-    body: body.toString(),
-  });
-  return parseApiResponse(res);
-}
-
-export async function plexSimpleLogin(): Promise<ApiResponse> {
-  const res = await fetch('/login/plex/simple', { credentials: 'include' });
-  return parseApiResponse(res);
-}
+// ── support ──────────────────────────────────────────────────────────────────
+export type SupportMessage = { from: "user" | "admin"; body: string; at: string; author: string };
+export type SupportTicket = { id: string; number: number; category: string; subject: string; status: "open" | "waiting" | "closed";
+  created_at: string; updated_at: string; messages: SupportMessage[] };
+export const SUPPORT_CATEGORIES: Record<string, string> = {
+  access: "Getting onto the server", playback: "Playback & streams", billing: "Billing & plans",
+  account: "Account & sign-in", request: "Requests & ideas", other: "Something else",
+};
