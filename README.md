@@ -47,7 +47,7 @@ More in [`docs/screenshots`](./docs/screenshots). The screenshots use demo data.
 
 ## Install
 
-You need Docker, a Plex server you own, Tautulli, and (for paid plans) a Stripe account.
+You need Docker, a Plex server you own, Tautulli, Seerr (Overseerr), and (for paid plans) a Stripe account.
 
 ```bash
 git clone https://github.com/Jarsky/plex-tier-manager.git
