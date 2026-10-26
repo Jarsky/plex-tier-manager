@@ -1,0 +1,53 @@
+<!-- Source for PTMBanner.png. Render at 1464x176 with device scale 2 (e.g. Playwright: locator("#banner").screenshot(omit_background=True)). -->
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800;900&display=block" rel="stylesheet">
+<style>
+  html,body{margin:0;background:transparent}
+  .b{position:relative;width:1464px;height:176px;border-radius:14px;overflow:hidden;box-sizing:border-box;
+     background:radial-gradient(420px 160px at 50% 50%,rgba(229,160,13,.16),transparent 70%),
+                radial-gradient(500px 220px at 0% 100%,rgba(217,113,28,.10),transparent 70%),
+                radial-gradient(500px 220px at 100% 0%,rgba(243,183,64,.08),transparent 70%),#141518;
+     border:1.5px solid rgba(229,160,13,.45);box-shadow:inset 0 0 40px rgba(229,160,13,.10);font-family:Montserrat,sans-serif}
+  /* left: wall of poster tiles fading toward the middle */
+  .wall{position:absolute;left:-30px;top:-40px;width:560px;height:280px;transform:rotate(-8deg);display:grid;
+        grid-template-columns:repeat(9,52px);gap:9px;-webkit-mask-image:linear-gradient(90deg,#000 10%,transparent 92%)}
+  .wall i{display:block;height:76px;border-radius:5px;border:1px solid rgba(255,255,255,.08);opacity:.55}
+  /* right: stream bars and quality chips */
+  .eq{position:absolute;right:120px;bottom:22px;display:flex;align-items:flex-end;gap:7px;
+      -webkit-mask-image:linear-gradient(270deg,#000 40%,transparent 100%)}
+  .eq i{display:block;width:9px;border-radius:5px;background:linear-gradient(#f3b740,#d9711c);opacity:.55;box-shadow:0 0 10px rgba(229,160,13,.35)}
+  .chip{position:absolute;font-weight:800;font-size:13px;letter-spacing:.08em;color:#e5a00d;border:1.5px solid rgba(229,160,13,.6);
+        border-radius:6px;padding:3px 8px;box-shadow:0 0 14px rgba(229,160,13,.25);background:rgba(229,160,13,.06)}
+  .film{position:absolute;right:-20px;top:0;bottom:0;width:58px;border-left:1px solid rgba(255,255,255,.06);
+        background:repeating-linear-gradient(#141518 0 10px,rgba(229,160,13,.22) 10px 22px) left 8px top 0/10px 100% no-repeat,
+                   repeating-linear-gradient(#141518 0 10px,rgba(229,160,13,.22) 10px 22px) right 8px top 0/10px 100% no-repeat}
+  .center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:26px}
+  .logo{width:118px;height:118px;filter:drop-shadow(0 0 18px rgba(229,160,13,.55))}
+  .name{font-weight:900;font-size:84px;line-height:.9;letter-spacing:.02em;
+        background:linear-gradient(90deg,#f3b740,#e5a00d 55%,#d9711c);-webkit-background-clip:text;color:transparent;
+        filter:drop-shadow(0 0 14px rgba(229,160,13,.35))}
+  .sub{margin-top:10px;font-weight:600;font-size:22px;letter-spacing:.22em;color:#f1efe9}
+</style></head><body>
+<div class="b" id="banner">
+  <div class="wall" id="wall"></div>
+  <div class="film"></div>
+  <div class="eq" id="eq"></div>
+  <span class="chip" style="right:330px;top:30px">4K</span>
+  <span class="chip" style="right:250px;top:62px;opacity:.7">1080p</span>
+  <span class="chip" style="right:390px;top:96px;opacity:.5">720p</span>
+  <span class="chip" style="right:150px;top:28px;opacity:.6">×2</span>
+  <div class="center">
+    <svg class="logo" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3b740"/><stop offset=".55" stop-color="#e5a00d"/><stop offset="1" stop-color="#d9711c"/></linearGradient></defs>
+      <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="#18191c" stroke="rgba(229,160,13,.5)" stroke-width="1.5"/>
+      <g fill="url(#g)"><rect x="11" y="36" width="5" height="12" rx="2.5" opacity=".55"/><rect x="19" y="28" width="5" height="20" rx="2.5" opacity=".8"/>
+      <path d="M30 16.5c0-1.6 1.8-2.6 3.1-1.7l18.4 13.5c1.1.8 1.1 2.6 0 3.4L33.1 45.2c-1.3.9-3.1-.1-3.1-1.7z" transform="translate(0 2)"/></g></svg>
+    <div><div class="name">PTM</div><div class="sub">PLEX TIER MANAGER</div></div>
+  </div>
+</div>
+<script>
+  const tones=["#3a2a14","#2a2d33","#4a3216","#23262b","#5a3a12","#30343a","#3d2c18","#26292e"];
+  const w=document.getElementById("wall");
+  for(let i=0;i<36;i++){const t=document.createElement("i");const a=tones[(i*5)%tones.length],b=tones[(i*3+2)%tones.length];
+    t.style.background=`linear-gradient(160deg,${a},${b})`;if(i%7===3)t.style.boxShadow="0 0 16px rgba(229,160,13,.35)";w.appendChild(t)}
+  const e=document.getElementById("eq");[18,34,26,52,40,66,48,30,58,74,44,62,36,82,54,40,70,50,28,46].forEach(h=>{const i=document.createElement("i");i.style.height=h+"px";e.appendChild(i)});
+</script></body></html>

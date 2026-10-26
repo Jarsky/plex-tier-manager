@@ -3,6 +3,7 @@ name = "ptm"
 version = "0.1.0"
 description = "Paid access to a Plex server: Plex sign-in, Stripe plans, sharing and Tautulli stream limits."
 requires-python = ">=3.12"
+license = "MIT"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
@@ -34,7 +35,7 @@ line-length = 120
 target-version = "py312"
 
 [build-system]
-requires = ["setuptools>=75"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
