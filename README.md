@@ -13,6 +13,7 @@
 ![CI](https://img.shields.io/github/actions/workflow/status/Jarsky/plex-tier-manager/ci.yml?branch=main)
 ![License](https://img.shields.io/github/license/Jarsky/plex-tier-manager?cacheSeconds=0)
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+![React](https://img.shields.io/badge/react-19-61DAFB)
 ![Docker](https://img.shields.io/badge/docker-compose-2496ED)
 
 ---
